@@ -54,6 +54,7 @@ lazy_static! {
         let mut tasks = [TaskControlBlock {
             task_cx: TaskContext::zero_init(),
             task_status: TaskStatus::UnInit,
+            syscall_cnt: [0; 420],
         }; MAX_APP_NUM];
         for (i, task) in tasks.iter_mut().enumerate() {
             task.task_cx = TaskContext::goto_restore(init_app_cx(i));
@@ -72,6 +73,16 @@ lazy_static! {
 }
 
 impl TaskManager {
+    fn get_current_task_syscall_cnt(&self,syscall_id: usize) -> isize {
+        let inner = self.inner.exclusive_access();
+        inner.tasks[inner.current_task].syscall_cnt[syscall_id]
+    }
+    fn increase_current_task_syscall_cnt(&self, syscall_id: usize) -> isize {
+        let mut inner = self.inner.exclusive_access();
+        let current = inner.current_task;
+        inner.tasks[current].syscall_cnt[syscall_id] += 1;
+        inner.tasks[current].syscall_cnt[syscall_id]
+    }
     /// Run the first task in task list.
     ///
     /// Generally, the first task in task list is an idle task (we call it zero process later).
@@ -137,9 +148,19 @@ impl TaskManager {
     }
 }
 
+/// asdf
+pub fn get_current_task_syscall_cnt(syscall_id: usize) -> isize {
+    TASK_MANAGER.get_current_task_syscall_cnt(syscall_id)
+}
+
 /// Run the first task in task list.
 pub fn run_first_task() {
     TASK_MANAGER.run_first_task();
+}
+
+/// ababa
+pub fn increase_current_task_syscall_cnt(syscall_id: usize) -> isize {
+    TASK_MANAGER.increase_current_task_syscall_cnt(syscall_id)
 }
 
 /// Switch current `Running` task to the task we have found,
