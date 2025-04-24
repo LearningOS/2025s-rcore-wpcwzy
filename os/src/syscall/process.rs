@@ -27,13 +27,29 @@ pub fn sys_yield() -> isize {
 /// HINT: What if [`TimeVal`] is splitted by two pages ?
 pub fn sys_get_time(_ts: *mut TimeVal, _tz: usize) -> isize {
     trace!("kernel: sys_get_time");
-    -1
+    let us = crate::timer::get_time_us();
+    
+    return -1;
 }
 
 /// TODO: Finish sys_trace to pass testcases
 /// HINT: You might reimplement it with virtual memory management.
 pub fn sys_trace(_trace_request: usize, _id: usize, _data: usize) -> isize {
     trace!("kernel: sys_trace");
+    match _trace_request {
+        0 => {
+
+        }
+        1 => {
+
+        }
+        2 => {
+
+        }
+        _ => {
+            error!("Trace request {} not implemented", _trace_request);
+        }
+    }
     -1
 }
 
