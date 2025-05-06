@@ -1,5 +1,7 @@
 //! Implementation of [`PageTableEntry`] and [`PageTable`].
 
+use core::mem::size_of;
+
 use super::{frame_alloc, FrameTracker, PhysPageNum, StepByOne, VirtAddr, VirtPageNum};
 use alloc::vec;
 use alloc::vec::Vec;
@@ -25,6 +27,15 @@ bitflags! {
         /// Dirty
         const D = 1 << 7;
     }
+}
+
+#[derive(Debug)]
+pub enum TranslateError {
+    NotValid,
+    NotUser,
+    NotReadable,
+    NotWritable,
+    NotExecutable,
 }
 
 #[derive(Copy, Clone)]
@@ -57,6 +68,10 @@ impl PageTableEntry {
     /// The page pointered by page table entry is valid?
     pub fn is_valid(&self) -> bool {
         (self.flags() & PTEFlags::V) != PTEFlags::empty()
+    }
+    /// The page pointered by page table entry is user visible?
+    pub fn is_user(&self) -> bool {
+        (self.flags() & PTEFlags::U) != PTEFlags::empty()
     }
     /// The page pointered by page table entry is readable?
     pub fn readable(&self) -> bool {
@@ -157,6 +172,77 @@ impl PageTable {
     }
 }
 
+/// Translate a ptr[u8] array with LENGTH len to a mutable u8 pointer through page table(change me)
+pub fn translated_mutable_pointer<T>(token: usize, ptr: *mut T) -> Result<*mut T, TranslateError> {
+    let page_table = PageTable::from_token(token);
+    let len = size_of::<T>();
+    let start = ptr as usize;
+    let end = start + len;
+    while start < end {
+        let start_va = VirtAddr::from(start);
+        let mut vpn = start_va.floor();
+        if let Some(pte) = page_table.translate(vpn) {
+            if !pte.is_valid() {
+                return Err(TranslateError::NotValid);
+            }
+            if !pte.is_user() {
+                return Err(TranslateError::NotUser);
+            }
+            if !pte.readable() {
+                return Err(TranslateError::NotReadable);
+            }
+            if !pte.writable() {
+                return Err(TranslateError::NotWritable);
+            }
+            let ppn = pte.ppn();
+            vpn.step();
+            let mut end_va: VirtAddr = vpn.into();
+            end_va = end_va.min(VirtAddr::from(end));
+            if end_va.page_offset() == 0 {
+                return Ok(ppn.get_bytes_array()[start_va.page_offset()..].as_ptr() as *mut T);
+            } else {
+                return Ok(ppn.get_bytes_array()[start_va.page_offset()..end_va.page_offset()].as_ptr() as *mut T);
+            }
+        } else {
+            return Err(TranslateError::NotValid);
+        }
+    }
+    Ok(ptr)
+}
+/// Translate a ptr[u8] array with LENGTH len to a mutable u8 pointer through page table(change me)
+pub fn translated_const_pointer<T>(token: usize, ptr: *const T) -> Result<*const T, TranslateError> {
+    let page_table = PageTable::from_token(token);
+    let len = size_of::<T>();
+    let start = ptr as usize;
+    let end = start + len;
+    while start < end {
+        let start_va = VirtAddr::from(start);
+        let mut vpn = start_va.floor();
+        if let Some(pte) = page_table.translate(vpn) {
+            if !pte.is_valid() {
+                return Err(TranslateError::NotValid);
+            }
+            if !pte.is_user() {
+                return Err(TranslateError::NotUser);
+            }
+            if !pte.readable() {
+                return Err(TranslateError::NotReadable);
+            }
+            let ppn = pte.ppn();
+            vpn.step();
+            let mut end_va: VirtAddr = vpn.into();
+            end_va = end_va.min(VirtAddr::from(end));
+            if end_va.page_offset() == 0 {
+                return Ok(ppn.get_bytes_array()[start_va.page_offset()..].as_ptr() as *const T);
+            } else {
+                return Ok(ppn.get_bytes_array()[start_va.page_offset()..end_va.page_offset()].as_ptr() as *const T);
+            }
+        } else {
+            return Err(TranslateError::NotValid);
+        }
+    }
+    Ok(ptr)
+}
 /// Translate&Copy a ptr[u8] array with LENGTH len to a mutable u8 Vec through page table
 pub fn translated_byte_buffer(token: usize, ptr: *const u8, len: usize) -> Vec<&'static mut [u8]> {
     let page_table = PageTable::from_token(token);
