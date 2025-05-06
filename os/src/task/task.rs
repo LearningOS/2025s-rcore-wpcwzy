@@ -71,6 +71,9 @@ pub struct TaskControlBlockInner {
 
     /// Program break
     pub program_brk: usize,
+
+    /// syscall cnt
+    pub syscall_cnt: [isize; 450],
 }
 
 impl TaskControlBlockInner {
