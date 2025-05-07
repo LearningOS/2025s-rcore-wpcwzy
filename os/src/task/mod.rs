@@ -23,7 +23,6 @@ mod switch;
 mod task;
 
 use crate::fs::{open_file, OpenFlags};
-use crate::mm::MemorySet;
 use alloc::sync::Arc;
 pub use context::TaskContext;
 use lazy_static::*;
@@ -120,9 +119,4 @@ lazy_static! {
 ///Add init process to the manager
 pub fn add_initproc() {
     add_task(INITPROC.clone());
-}
-
-/// get current task's memory set
-pub fn get_current_memory_set() -> *mut MemorySet {
-    TASK_MANAGER.get_current_memory_set()
 }
