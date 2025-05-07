@@ -34,6 +34,12 @@ impl TaskControlBlock {
         let inner = self.inner_exclusive_access();
         inner.memory_set.token()
     }
+    /// get current task's memory set
+    pub fn get_current_memory_set(&self) -> *mut MemorySet {
+        let inner = self.inner.exclusive_access();
+        let memory_set_ptr = &inner.memory_set as *const crate::mm::MemorySet as *mut crate::mm::MemorySet;
+        memory_set_ptr
+    }
 }
 
 pub struct TaskControlBlockInner {
@@ -69,8 +75,11 @@ pub struct TaskControlBlockInner {
     /// Program break
     pub program_brk: usize,
 
-    /// syscall cnt
-    pub syscall_cnt: [isize; 450],
+    /// priority
+    pub priority: usize,
+
+    /// stide
+    pub stride: usize,
 }
 
 impl TaskControlBlockInner {
@@ -121,6 +130,8 @@ impl TaskControlBlock {
                     exit_code: 0,
                     heap_bottom: user_sp,
                     program_brk: user_sp,
+                    priority: 16,
+                    stride: 0,
                 })
             },
         };
@@ -194,6 +205,8 @@ impl TaskControlBlock {
                     exit_code: 0,
                     heap_bottom: parent_inner.heap_bottom,
                     program_brk: parent_inner.program_brk,
+                    priority: parent_inner.priority,
+                    stride: parent_inner.stride,
                 })
             },
         });
