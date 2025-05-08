@@ -10,6 +10,39 @@ use alloc::sync::{Arc, Weak};
 use alloc::vec;
 use alloc::vec::Vec;
 use core::cell::RefMut;
+use core::cmp::Ordering;
+
+#[derive(Copy, Clone)]
+pub struct Stride(pub usize);
+
+impl PartialOrd for Stride {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        let a = self.0;
+            let b = other.0;
+
+            if a < b {
+                // 按照前面证明不溢出时差值不会大于一半
+                if (b-a) > 127 {
+                    Some(Ordering::Greater)
+                } else {
+                    Some(Ordering::Less)
+                }
+            } else {
+                // 同上
+                if (a-b) > 127 {
+                    Some(Ordering::Less)
+                } else {
+                    Some(Ordering::Greater)
+                }
+            }
+    }
+}
+
+impl PartialEq for Stride {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
 
 /// Task control block structure
 ///
@@ -82,7 +115,7 @@ pub struct TaskControlBlockInner {
     pub priority: usize,
 
     /// stide
-    pub stride: usize,
+    pub stride: Stride,
 }
 
 impl TaskControlBlockInner {
@@ -148,7 +181,7 @@ impl TaskControlBlock {
                     heap_bottom: user_sp,
                     program_brk: user_sp,
                     priority: 16,
-                    stride: 0,
+                    stride: Stride(0),
                 })
             },
         };

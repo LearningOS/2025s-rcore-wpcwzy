@@ -30,8 +30,8 @@ impl TaskManager {
         let mut min_stride_index = 0;
         for (i, task) in self.ready_queue.iter().enumerate() {
             let stride = task.inner_exclusive_access().stride;
-            if stride < min_stride {
-                min_stride = stride;
+            if stride.0 < min_stride {
+                min_stride = stride.0;
                 min_stride_index = i;
             }
         }
@@ -41,9 +41,9 @@ impl TaskManager {
             let task = self.ready_queue.remove(min_stride_index).unwrap();
             // update stride of the task
             let mut inner = task.inner_exclusive_access();
-            inner.stride += BIG_STRIDE / inner.priority;
+            inner.stride.0 += BIG_STRIDE / inner.priority;
             Some(task.clone())
-        } 
+        }
     }
 }
 
