@@ -236,8 +236,9 @@ pub fn sys_spawn(path: *const u8) -> isize {
     );
     let path = translated_str(current_user_token(), path);
     trace!("kernel:pid[{}] sys_spawn path:{}", current_task().unwrap().pid.0, path);
-    if let Some(elf_data) = get_app_data_by_name(path.as_str()) {
-        let new_task_tcb = Arc::new(TaskControlBlock::new(elf_data));
+    if let Some(app_inode) = open_file(path.as_str(),OpenFlags::RDONLY) {
+        let app_data = app_inode.read_all();
+        let new_task_tcb = Arc::new(TaskControlBlock::new(app_data.as_slice()));
         new_task_tcb.inner_exclusive_access().parent = Some(Arc::downgrade(&current_task().unwrap()));
         current_task().unwrap().inner_exclusive_access().children.push(new_task_tcb.clone());
         let pid = new_task_tcb.pid.0;

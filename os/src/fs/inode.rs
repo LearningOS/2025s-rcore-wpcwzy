@@ -4,7 +4,7 @@
 //!
 //! `UPSafeCell<OSInodeInner>` -> `OSInode`: for static `ROOT_INODE`,we
 //! need to wrap `OSInodeInner` into `UPSafeCell`
-use super::File;
+use super::{File, Stat, StatMode};
 use crate::drivers::BLOCK_DEVICE;
 use crate::mm::UserBuffer;
 use crate::sync::UPSafeCell;
@@ -52,6 +52,36 @@ impl OSInode {
             v.extend_from_slice(&buffer[..len]);
         }
         v
+    }
+    /// stat
+    pub fn stat(&self) -> Stat {
+        trace!("OSInode: stat");
+        let inner = self.inner.exclusive_access();
+        trace!("OSInode: get exclusive_access");
+        let ino = inner.inode.block_id as u64;
+        trace!("OSInode: get block_id");
+        let nlink = inner.inode.nlink();
+        trace!("OSInode: get nlink={}", nlink);
+        trace!("OSInode: drop inode");
+        Stat {
+            dev: 0,
+            ino: ino,
+            mode: StatMode::FILE,
+            nlink: nlink,
+            pad: [0; 7],
+        }
+    }
+    /// get block info
+    pub fn get_block_info(&self) -> (usize, usize) {
+        let inner = self.inner.exclusive_access();
+        let block_id = inner.inode.block_id;
+        let block_offset = inner.inode.block_offset;
+        (block_id, block_offset)
+    }
+    /// dealloc inode
+    pub fn clear(&self) {
+        let inner = self.inner.exclusive_access();
+        inner.inode.clear();
     }
 }
 
@@ -155,5 +185,8 @@ impl File for OSInode {
             total_write_size += write_size;
         }
         total_write_size
+    }
+    fn as_any(&self) -> &dyn core::any::Any {
+        self
     }
 }

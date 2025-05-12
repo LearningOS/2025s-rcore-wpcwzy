@@ -4,9 +4,10 @@ mod inode;
 mod stdio;
 
 use crate::mm::UserBuffer;
+use core::any::Any; // Import Any from core, instructed by gemini pro
 
 /// trait File for all file types
-pub trait File: Send + Sync {
+pub trait File: Send + Sync + Any { // Add Any bound, instructed by gemini pro
     /// the file readable?
     fn readable(&self) -> bool;
     /// the file writable?
@@ -15,6 +16,8 @@ pub trait File: Send + Sync {
     fn read(&self, buf: UserBuffer) -> usize;
     /// write to the file from buf, return the number of bytes written
     fn write(&self, buf: UserBuffer) -> usize;
+    /// convert to a Any trait object
+    fn as_any(&self) -> &dyn Any;
 }
 
 /// The stat of a inode
